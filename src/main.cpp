@@ -1,4 +1,3 @@
-#include "Pitches.h"
 #include <Arduino.h>
 extern "C" {
   #include "user_interface.h"
