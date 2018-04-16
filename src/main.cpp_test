@@ -70,8 +70,9 @@ String MQTT_Topic[MQTT_Topic_Number_Of] = {
 Ticker ESP_Reboot_Ticker;
 
 
+
 // ------------------------------------------------------------ Buzzer ------------------------------------------------------------
-const int Buzzer_Pin = D8;
+const int Buzzer_Pin = D1;
 
 Ticker Buzzer_Ticker;
 
@@ -79,22 +80,22 @@ String Buzzer_Melody;
 
 
 // ------------------------------------------------------------ DHT ------------------------------------------------------------
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <DHT_U.h>
-
-#define DHTTYPE DHT22   // DHT Shield uses DHT 11
-#define DHTPIN D4       // DHT Shield uses pin D4
-
-DHT dht(DHTPIN, DHTTYPE);
-
-float humidity, temperature;                 // Raw float values from the sensor
-char str_humidity[10], str_temperature[10];  // Rounded sensor values and as strings
-// Generally, you should use "unsigned long" for variables that hold time
-unsigned long previousMillis = 0;            // When the sensor was last read
-const long interval = 2000;                  // Wait this long until reading again
-
-bool DHT_Trigger = false;
+// #include <Adafruit_Sensor.h>
+// #include <DHT.h>
+// #include <DHT_U.h>
+//
+// #define DHTTYPE DHT22   // DHT Shield uses DHT 11
+// #define DHTPIN D4       // DHT Shield uses pin D4
+//
+// DHT dht(DHTPIN, DHTTYPE);
+//
+// float humidity, temperature;                 // Raw float values from the sensor
+// char str_humidity[10], str_temperature[10];  // Rounded sensor values and as strings
+// // Generally, you should use "unsigned long" for variables that hold time
+// unsigned long previousMillis = 0;            // When the sensor was last read
+// const long interval = 2000;                  // Wait this long until reading again
+//
+// bool DHT_Trigger = false;
 
 
 // ############################################################ DHT_Read() ############################################################
@@ -121,14 +122,11 @@ void DHT_Read() {
     dtostrf(humidity, 1, 2, str_humidity);
     dtostrf(temperature, 1, 2, str_temperature);
 
-    // Humidity
-    MQTT_Client.publish(String(MQTT_Topic[Topic_DHT] + "/Humidity").c_str(), 0, false, String(str_humidity).c_str());
+    MQTT_Client.publish(MQTT_Topic[Topic_DHT].c_str(), 0, false, "Failed to read from DHT sensor");
 
-
-    // Temperature
-    MQTT_Client.publish(String(MQTT_Topic[Topic_DHT] + "/Temperature").c_str(), 0, false, String(str_temperature).c_str());
-
-    Serial.println("Humidity: " + String(str_humidity) + " - Temperature: " + String(str_temperature) + " °C");
+    String DHT_String = "Humidity: " + String(str_humidity) + " - Temperature: " + String(str_temperature);
+    MQTT_Client.publish(MQTT_Topic[Topic_DHT].c_str(), 0, false, DHT_String.c_str());
+    Serial.println(DHT_String + " °C");
   }
 
 } // DHT_Read()
@@ -144,6 +142,16 @@ bool DHT(String Topic, String Payload) {
 } // DHT
 
 
+// ############################################################ Buzzer_OFF() ############################################################
+void Buzzer_OFF() {
+
+  noTone(Buzzer_Pin);
+
+  Serial.println("Play OFF"); // rm
+
+} // Buzzer_OFF()
+
+
 // ############################################################ Buzzer_Play() ############################################################
 void Buzzer_Play() {
 
@@ -157,10 +165,13 @@ void Buzzer_Play() {
 
     int Tone_Delay = Buzzer_Melody.substring(0, Buzzer_Melody.indexOf("-")).toInt();
 
+    // Remove "-"
     Buzzer_Melody = Buzzer_Melody.substring(Buzzer_Melody.indexOf("-") + 1, Buzzer_Melody.length());
 
+    Serial.println("Delay " + String(Tone_Delay)); // rm
+
     Buzzer_Ticker.once_ms(Tone_Delay, Buzzer_Play);
-  } // Delay
+  }
 
 
   // Play
@@ -168,13 +179,21 @@ void Buzzer_Play() {
     int Tone = Buzzer_Melody.substring(0, Buzzer_Melody.indexOf(",")).toInt();
     unsigned long Tone_Time = Buzzer_Melody.substring(Buzzer_Melody.indexOf(",") + 1, Buzzer_Melody.length()).toInt();
 
+    Serial.println("Buzzer_Melody: " + Buzzer_Melody); // rm
+
+
     Buzzer_Melody = Buzzer_Melody.substring(Buzzer_Melody.indexOf(String(Tone_Time)) + String(Tone_Time).length(), Buzzer_Melody.length());
 
-    tone(Buzzer_Pin, Tone, Tone_Time);
+    tone(Buzzer_Pin, Tone, Tone_Time); // UNCOMMENT ME
+
+    Serial.print("Play: " + String(Tone)); // rm
+    Serial.println(" For: " + String(Tone_Time)); // rm
 
     if (Buzzer_Melody != "") {
       Buzzer_Ticker.once_ms(Tone_Time, Buzzer_Play);
-    } // Play
+    }
+
+    // else Buzzer_Ticker.once_ms(Tone_Time, Buzzer_OFF);
   }
 
 } // Buzzer_Play()
